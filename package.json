@@ -4,7 +4,8 @@
   "description": "",
   "main": "snapshot-ajax.js",
   "scripts": {
-    "start": "node snapshot-ajax.js"
+  	"test": "node snapshot-ajax.js",
+    "start": "node snapshot-ajax.js -s"
   },
   "author": "Kennedy Rose <kennedy@kennedyrose.com> (http://kennedyrose.com)",
   "license": "MIT",

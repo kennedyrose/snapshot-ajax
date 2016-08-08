@@ -3,7 +3,6 @@
 	TODO:
 	- Save internal CSS
 	- Save internal JS
-	- Activate via npm scripts & arguments
 
 */
 'use strict'
