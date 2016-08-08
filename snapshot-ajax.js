@@ -1,8 +1,8 @@
 /*
 
 	TODO:
-	- clean web folder on init
-	- clean db on init
+	- Save internal CSS
+	- Save internal JS
 
 */
 'use strict'
@@ -15,7 +15,7 @@ const config = {
 	dbPath: __dirname + '/links.db',
 	outputPath: __dirname + '/output',
 	extension: 'html',
-	waitTime: 5000,
+	waitTime: 3000,
 	showBrowser: true,
 	autoStart: true
 }
