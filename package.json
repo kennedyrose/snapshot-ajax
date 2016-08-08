@@ -1,0 +1,16 @@
+{
+  "name": "snapshot-ajax",
+  "version": "1.0.0",
+  "description": "",
+  "main": "snapshot-ajax.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Kennedy Rose <kennedy@kennedyrose.com> (http://kennedyrose.com)",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^0.30.0",
+    "nedb": "^1.8.0",
+    "nightmare": "^2.6.0"
+  }
+}
