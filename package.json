@@ -4,15 +4,14 @@
   "description": "",
   "main": "snapshot-ajax.js",
   "scripts": {
-  	"test": "node snapshot-ajax.js",
-    "add": "node",
-    "start": "node"
+    "start": "node snapshot-ajax.js"
   },
   "author": "Kennedy Rose <kennedy@kennedyrose.com> (http://kennedyrose.com)",
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^0.30.0",
     "nedb": "^1.8.0",
-    "nightmare": "^2.6.0"
+    "nightmare": "^2.6.0",
+    "yargs": "^4.8.1"
   }
 }

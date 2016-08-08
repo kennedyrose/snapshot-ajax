@@ -3,6 +3,7 @@
 	TODO:
 	- Save internal CSS
 	- Save internal JS
+	- Activate via npm scripts & arguments
 
 */
 'use strict'
@@ -36,7 +37,8 @@ const Datastore = require('nedb'),
 	nm = Nightmare({
 		show: config.showBrowser
 	}),
-	fs = require('fs-extra')
+	fs = require('fs-extra'),
+	argv = require('yargs').argv
 
 
 
@@ -249,10 +251,14 @@ function insertLinks(links){
 
 
 
-
-
-init('http://trophyridge.com/')
-//start()
+// If running functions from arguments
+let url = argv.u || argv.url
+if(url){
+	init(url)
+}
+if(argv.s || argv.start){
+	start()
+}
 
 
 
