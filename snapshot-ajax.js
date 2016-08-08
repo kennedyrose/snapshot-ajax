@@ -7,23 +7,34 @@
 */
 'use strict'
 
+
+
+
 // Settings
 const config = {
 	dbPath: __dirname + '/links.db',
 	outputPath: __dirname + '/output',
-	extension: 'html'
-	waitTime: 2000
+	extension: 'html',
+	waitTime: 5000,
+	showBrowser: true,
+	autoStart: true
 }
+
+
+
+
+
+
 
 // Modules and constructors
 const Datastore = require('nedb'),
 	db = new Datastore({
 		filename: config.dbPath,
 		autoload: true
-	})
+	}),
 	Nightmare = require('nightmare'),
 	nm = Nightmare({
-		show: true
+		show: config.showBrowser
 	}),
 	fs = require('fs-extra')
 
@@ -52,19 +63,40 @@ function cleanDb(link){
 function startDb(link){
 	db.insert({
 		link: link,
-		parsed: false
+		parsed: false,
+		origin: true
 	}, err => {
 		if(err){
 			console.log('init() failed: ', err)
 		}
 		console.log('Added link: ', link)
 		console.log('Init complete!')
+		if(config.autoStart){
+			start()
+		}
 	})
 }
 
 
 // Starts the process of parsing links
+let origin = ''
+function start(){
+	console.log('Starting...')
+	db.find({origin: true}).limit(1).exec((err, docs) => {
+		if(err){
+			console.log('start() failed: ', err)
+		}
+		if(!docs.length){
+			console.log('No origin found!')
+		}
+		else{
+			origin = getOrigin(docs[0].link)
+			findLink()
+		}
+	})
+}
 function findLink(){
+	console.log('Querying for link...')
 	db.find({parsed: false}).limit(1).exec((err, docs) => {
 		if(err){
 			console.log('findLink() failed: ', err)
@@ -79,26 +111,55 @@ function findLink(){
 		}
 	})
 }
+function getOrigin(str){
+	str = str.split('://')[1].split('/')[0]
+	if(str.indexOf('www.') === 0){
+		str = str.replace('www.', '')
+	}
+	return str
+}
 
 function parseLink(link){
+	console.log('Parsing link...')
 	nm
 		.goto(link)
 		.wait(config.waitTime)
-		.evaluate(function(){
+		.evaluate(function(origin){
+
+
+			function getOrigin(str){
+				if(!str || str.indexOf('://') === -1){
+					return false
+				}
+				str = str.split('://')[1].split('/')[0]
+				if(str.indexOf('www.') === 0){
+					str = str.replace('www.', '')
+				}
+				return str
+			}
+
+
 			let links = document.querySelectorAll('a'),
 				paths = [],
 				i
 			for(i = links.length; i--;){
-				if(paths.indexOf(links[i]) === -1){
-					paths.push(links[i])
+				// If outbound link
+				if(getOrigin(links[i].href) !== origin){
+					continue
+				}
+
+				// Otherwise, add to paths
+				if(paths.indexOf(links[i].href) === -1){
+					paths.push(links[i].href)
 				}
 			}
 			return {
 				doc: '<!DOCTYPE html>' + document.documentElement.outerHTML,
 				links: paths
 			}
-		})
+		}, origin)
 		.then(obj => {
+			console.log('Page evaluated...')
 			// Get path
 			let path = link.split('/')
 			path.shift()
@@ -108,7 +169,7 @@ function parseLink(link){
 
 			// Get filename or detect index
 			let name = path[path.length - 1]
-			if(name.indexOf('.') !== -1){
+			if(name && name.indexOf('.') !== -1){
 				path.pop()
 				name = name.split('.')
 				name.pop()
@@ -117,7 +178,7 @@ function parseLink(link){
 			else{
 				name = 'index.' + config.extension
 			}
-			createFile(obj)
+			createFile(obj, path, name, link)
 
 
 		})
@@ -126,8 +187,8 @@ function parseLink(link){
 		})
 }
 
-function createFile(obj){
-
+function createFile(obj, path, name, link){
+	console.log('Creating file...')
 	// Create file directory
 	fs.ensureDir(config.outputPath + '/' + path, err => {
 		if(err){
@@ -138,23 +199,26 @@ function createFile(obj){
 			if(err){
 				console.log('writeFile() failed: ', err)
 			}
+			console.log('Wrote file.')
 			// Mark as parsed
 			db.update({link: link}, {parsed: true}, {}, err => {
 				if(err){
 					console.log('update() failed: ', err)
-					// Insert new links
-					insertLinks(obj.links)
 				}
+				console.log('Mark as parsed')
+				// Insert new links
+				insertLinks(obj.links)
 			})
 		})
-	}
+	})
 }
 
 function insertLinks(links){
 	if(links.length){
+		console.log('Inserting link: ' + links[0])
 		db.find({link: links[0]}).limit(1).exec((err, docs) => {
 			if(err){
-				console.log('find() failed: ', err)
+				console.log('insertLinks() failed: ', err)
 			}
 			if(!docs.length){
 				db.insert({
@@ -164,14 +228,21 @@ function insertLinks(links){
 					if(err){
 						console.log('insert() failed: ', err)
 					}
+					console.log('Link inserted')
 					links.shift()
 					insertLinks(links)
 				})
+			}
+			else{
+				console.log('Link already exists')
+				links.shift()
+				insertLinks(links)
 			}
 		})
 	}
 	// If done, start on new link
 	else{
+		console.log('Done inserting links')
 		findLink()
 	}
 }
@@ -180,8 +251,8 @@ function insertLinks(links){
 
 
 
-
-
+init('http://trophyridge.com/')
+//start()
 
 
 
