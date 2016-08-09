@@ -1,8 +1,10 @@
 /*
 
 	TODO:
-	- Save internal CSS
-	- Save internal JS
+	- Absolute path CSS, JS, & images for testing
+		+ Styles and images can easily be changed during eval
+		+ JS has to be changed in post
+	- Save internal CSS, JS, & images option?
 
 */
 'use strict'
@@ -16,8 +18,11 @@ const config = {
 	outputPath: __dirname + '/output',
 	extension: 'html',
 	waitTime: 3000,
-	showBrowser: true,
-	autoStart: true
+	showBrowser: false,
+	autoStart: true,
+
+	// For testing
+	absolutePaths: true
 }
 
 
@@ -34,7 +39,8 @@ const Datastore = require('nedb'),
 	}),
 	Nightmare = require('nightmare'),
 	nm = Nightmare({
-		show: config.showBrowser
+		show: config.showBrowser,
+		alwaysOnTop: false
 	}),
 	fs = require('fs-extra'),
 	argv = require('yargs').argv
@@ -125,7 +131,36 @@ function parseLink(link){
 	nm
 		.goto(link)
 		.wait(config.waitTime)
-		.evaluate(function(origin){
+		.evaluate(function(origin, absolutePaths){
+
+
+			function convertRelToAbsUrl(url) {
+				var baseUrl = null
+				if (/^(https?|file|ftps?|mailto|javascript|data:image\/[^;]{2,9};):/i.test(url)) {
+					return url // url is already absolute
+				}
+				baseUrl = location.href.match(/^(.+)\/?(?:#.+)?$/)[0] + '/'
+				if (url.substring(0, 2) === '//') {
+					return location.protocol + url
+				}
+				if (url.charAt(0) === '/') {
+					return location.protocol + '//' + location.host + url
+				}
+				if (url.substring(0, 2) === './') {
+					url = '.' + url
+				}
+				else if (/^\s*$/.test(url)) {
+					return '' // empty = return nothing
+				}
+				url = baseUrl + '../' + url
+				while (/\/\.\.\//.test(url)) {
+					url = url.replace(/[^\/]+\/+\.\.\//g, '')
+				}
+				url = url.replace(/\.$/, '').replace(/\/\./g, '').replace(/"/g, '%22')
+					.replace(/'/g, '%27').replace(/</g, '%3C').replace(/>/g, '%3E')
+				return url
+			}
+
 
 
 			function getOrigin(str){
@@ -139,10 +174,15 @@ function parseLink(link){
 				return str
 			}
 
-
 			let links = document.querySelectorAll('a'),
 				paths = [],
 				i
+
+
+
+
+
+			// Get links
 			for(i = links.length; i--;){
 				// If outbound link
 				if(getOrigin(links[i].href) !== origin){
@@ -154,11 +194,38 @@ function parseLink(link){
 					paths.push(links[i].href)
 				}
 			}
+
+
+
+
+
+			// Change to absolute paths
+			if(absolutePaths){
+				let els = document.querySelectorAll('link, img, script')
+				for(i = els.length; i--;){
+					if(els[i].href){
+						let href = convertRelToAbsUrl(els[i].href)
+						if(href){
+							els[i].setAttribute('href', href)
+						}
+					}
+					if(els[i].src){
+						let src = convertRelToAbsUrl(els[i].src)
+						if(src){
+							els[i].setAttribute('src', src)
+						}
+					}
+				}
+			}
+
+
+
+
 			return {
 				doc: '<!DOCTYPE html>' + document.documentElement.outerHTML,
 				links: paths
 			}
-		}, origin)
+		}, origin, config.absolutePaths)
 		.then(obj => {
 			console.log('Page evaluated...')
 			// Get path
@@ -263,7 +330,7 @@ if(argv.s || argv.start){
 
 
 
-
+init('http://trophyridge.com/')
 
 
 
